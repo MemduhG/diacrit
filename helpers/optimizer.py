@@ -3,8 +3,8 @@
 from __future__ import division
 
 from keras import optimizers
-from keras.legacy import interfaces
-from keras.utils.generic_utils import get_custom_objects
+#from keras.legacy import interfaces
+from tensorflow.keras.utils import get_custom_objects
 from keras import backend as K
 
 
@@ -175,7 +175,7 @@ class OptimizerWrapper(optimizers.Optimizer):
         grads = self._optimizer_get_gradients(loss, params)
         return grads
 
-    @interfaces.legacy_get_updates_support
+    #@interfaces.legacy_get_updates_support
     def get_updates(self, loss, params):
         """
         Computes the update operations of the wrapped Optimizer using

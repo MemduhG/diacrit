@@ -7,12 +7,15 @@ import tensorflow as tf
 from os import listdir, environ
 from os.path import isdir, isfile, join
 from helpers.optimizer import NormalizedOptimizer
-from keras.models import load_model as keras_load_model
-from keras.initializers import glorot_normal
+from tensorflow.keras.models import load_model as keras_load_model
+#from keras.initializers import glorot_normal
+from tensorflow.keras.initializers import GlorotNormal
 from keras_contrib.layers import CRF
 from keras_contrib.losses import crf_loss
 from tensorflow import keras
 from tensorflow.keras.models import load_model as tf_load_model
+import argparse
+
 
 CONSTANTS_PATH = 'helpers/constants'
 
@@ -128,12 +131,13 @@ def predict_rnn(line, model, ARABIC_LETTERS_LIST, DIACRITICS_LIST, CHARACTERS_MA
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Diacritize Given File Using Specific Model')
-  parser.add_argument('-t', '--model-type', required=True, choices=['ffnn', 'rnn'])
-  parser.add_argument('-n', '--model-number', required=True)
+  parser.add_argument('-t', '--model-type', required=False, choices=['ffnn', 'rnn'], default='rnn')
+  parser.add_argument('-n', '--model-number', required=False, default=3)
   parser.add_argument('-s', '--model-size', default='small', choices=['small', 'big'])
-  parser.add_argument('-a', '--model-average', choices=[1, 5, 10, 20], type=int)
+  parser.add_argument('-a', '--model-average', choices=[1, 5, 10, 20], type=int, default=20)
   parser.add_argument('-in', '--input-file-path', required=True)
-  parser.add_argument('-out', '--output-file-path', required=True)
+  parser.add_argument('-out', '--output-file-path', required=False, default="out.txt")
+
   args = parser.parse_args()
 
   args.model_type = args.model_type.lower()
@@ -145,17 +149,21 @@ if __name__ == '__main__':
 
   # shut up tensorflow and keras
   environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-  tf.logging.set_verbosity(tf.logging.ERROR)
+  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
   # load the model
   model_path = get_model_path(args.model_type, args.model_number, args.model_size, args.model_average)
   print('Loading model from: %s' % model_path)
   custom_objects = {
-    'GlorotNormal': glorot_normal(),
+    'GlorotNormal': GlorotNormal(),
     'CRF': CRF,
     'crf_loss': crf_loss,
     'NormalizedOptimizer': NormalizedOptimizer
   }
+  # TODO disable eager exec, save only the model, load and predict.
+  tf.compat.v1.disable_eager_execution()
+
+
   # try to load the model using keras load model method
   try:
     model = keras_load_model(model_path, custom_objects=custom_objects)
