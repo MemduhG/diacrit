@@ -6,14 +6,6 @@ import tensorflow as tf
 
 from os import listdir, environ
 from os.path import isdir, isfile, join
-from helpers.optimizer import NormalizedOptimizer
-from tensorflow.keras.models import load_model as keras_load_model
-#from keras.initializers import glorot_normal
-from tensorflow.keras.initializers import GlorotNormal
-from keras_contrib.layers import CRF
-from keras_contrib.losses import crf_loss
-from tensorflow import keras
-from tensorflow.keras.models import load_model as tf_load_model
 import argparse
 
 
@@ -151,27 +143,12 @@ if __name__ == '__main__':
   environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
   tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
-  # load the model
-  model_path = get_model_path(args.model_type, args.model_number, args.model_size, args.model_average)
-  print('Loading model from: %s' % model_path)
-  custom_objects = {
-    'GlorotNormal': GlorotNormal(),
-    'CRF': CRF,
-    'crf_loss': crf_loss,
-    'NormalizedOptimizer': NormalizedOptimizer
-  }
-  # TODO disable eager exec, save only the model, load and predict.
   tf.compat.v1.disable_eager_execution()
 
 
-  # try to load the model using keras load model method
-  try:
-    model = keras_load_model(model_path, custom_objects=custom_objects)
-  # if error occurred, try to load using tensorflow.keras load model method
-  except:
-    model = tf_load_model(model_path)
-  model.summary()
-  print('Model loaded successfully!')
+  model = tf.keras.models.load_model("models/small_rnn.h5")
+
+  #tf.keras.models.save_model(model, "models/small_rnn.h5", include_optimizer=False, save_format="h5")
 
   # load the data
   print('Loading data...')
@@ -180,27 +157,14 @@ if __name__ == '__main__':
 
   # load the needed constants
   print('Loading constants...')
-  # add missing character from the library
-  with open(join(CONSTANTS_PATH, 'ARABIC_LETTERS_LIST.pickle'), 'rb') as file:
-    ARABIC_LETTERS_LIST = pkl.load(file)
-  with open(join(CONSTANTS_PATH, 'DIACRITICS_LIST.pickle'), 'rb') as file:
-    DIACRITICS_LIST = pkl.load(file)
-  with open(join(CONSTANTS_PATH, '%s_%s_CHARACTERS_MAPPING.pickle' % (args.model_type.upper(), args.model_size.upper())), 'rb') as file:
-    CHARACTERS_MAPPING = pkl.load(file)
-  with open(join(CONSTANTS_PATH, '%s_REV_CLASSES_MAPPING.pickle' % args.model_type.upper()), 'rb') as file:
-    REV_CLASSES_MAPPING = pkl.load(file)
+  with open("helpers/constants.pkl", "rb") as infile:
+    ARABIC_LETTERS_LIST, DIACRITICS_LIST, CHARACTERS_MAPPING, REV_CLASSES_MAPPING = pkl.load(infile)
 
   # start predicting
   print('Start predicting...')
   outputs = list()
   for idx, line in enumerate(data):
-    if args.model_type == 'ffnn':
-      outputs.append(predict_ffnn(line, model, ARABIC_LETTERS_LIST,
-                                               DIACRITICS_LIST,
-                                               CHARACTERS_MAPPING,
-                                               REV_CLASSES_MAPPING))
-    elif args.model_type == 'rnn':
-      outputs.append(predict_rnn(line, model, ARABIC_LETTERS_LIST,
+    outputs.append(predict_rnn(line, model, ARABIC_LETTERS_LIST,
                                               DIACRITICS_LIST,
                                               CHARACTERS_MAPPING,
                                               REV_CLASSES_MAPPING))
